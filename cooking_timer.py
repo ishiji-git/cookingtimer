@@ -1,4 +1,6 @@
 import sys
+import getopt
+import pathlib
 import wave
 import winsound as ws
 import time
@@ -46,22 +48,71 @@ class CookingTimer:
             print(time.ctime(), ": {0} sec / T {1} sec".format(count, count - self.sec))
         self.event.clear()
 
+def convert_timestr_to_sec(timestr):
+    import re
+    val = 0
+    sec = 0
+    fields = re.split("([hms])", timestr.rstrip().lower())
+    for field in fields:
+        if field == "h":
+            sec += val * 3600
+            val = 0
+        elif field == "m":
+            sec += val * 60
+            val = 0
+        elif field == "s":
+            sec += val
+            val = 0
+        elif field == "":
+            break
+        else:
+            val = float(field)
+    if val != 0:
+        sec += val
+    return int(sec)
+
 if __name__ == "__main__":
     beep = BeepSound()
     cooking_timer = CookingTimer()
 
-    if len(sys.argv) == 1:
+    _usage = """Usage: {} [time]
+
+    time: timer time. default is 180s.
+
+      FORMAT)
+          s, S: seconds
+          m, M: minites
+          h, H: hours
+      Example)
+        180s  : 180 seconds. typical time for Nissin Cup Noodle to be ready.
+        5m    : 5 minites. typical time for ToyoSuisan Akai Kitsune to be ready.
+        1.5h  : 1 and a half hour. tonight menu is the curry.
+        1h30m : 1 hour and 30 minites. simmering time for kintoki beans.
+
+    """
+
+    sec = 0
+    if len(sys.argv) < 2:
         print("")
         print(" *** Cooking Timer ***")
+        print("")
+        print(_usage.format(sys.argv[0]))
         print("")
         print("   request sec(default 180sec) : ", end="")
         a = input()
         if a == "":
             sec = 180
         else:
-            sec = int(a)
+            timestr = a
     else:
-        sec = int(sys.argv[1])
+        timestr = sys.argv[1]
+    if sec == 0:
+        sec = convert_timestr_to_sec(timestr)
+
+    if sec <= 60:
+        print(f"\ntimer start: {sec}s\n")
+    elif sec > 60:
+        print(f"\ntimer start: {sec}s/{int(sec/60)}m{sec-int(sec/60)*60}s")
 
     if cooking_timer.start(sec, False):
         beep.until_keyhit()
